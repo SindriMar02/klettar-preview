@@ -1,0 +1,620 @@
+/* Klettar: the Twin Villas stacked doors for Klettar Tower + The Old Hatchery.
+   Tokens and rules in DESIGN.md. */
+
+@font-face{
+  font-family:'Overused Grotesk';
+  src:url('assets/fonts/OverusedGrotesk-Book.woff2') format('woff2');
+  font-weight:400;font-style:normal;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215;
+}
+@font-face{
+  font-family:'JetBrains Mono';
+  src:url('assets/fonts/jetbrains-mono-400.woff2') format('woff2');
+  font-weight:400;font-style:normal;font-display:swap;
+}
+
+:root{
+  --ink:#121211;
+  --salt:#F3F1EC;
+  --salt-72:rgba(243,241,236,.72);
+  --hair:rgba(243,241,236,.16);
+
+  --e-out:cubic-bezier(.22,1,.36,1);
+  --e-hover:cubic-bezier(.25,1,.5,1);
+  --e-open:cubic-bezier(.76,0,.24,1);
+
+  /* The hero never gets shorter than 600px, so a landscape phone scrolls
+     instead of crushing two doors into 195px each. */
+  --hero-h:max(100vh,600px);
+  --hero-h:max(100svh,600px);
+
+  /* Door geometry. Every size below derives from the viewport, never from the
+     door, so resizing a door on hover reflows nothing inside it. */
+  --padL:max(clamp(16px,2vw,36px),env(safe-area-inset-left));
+  --padR:max(clamp(16px,3.4vw,64px),env(safe-area-inset-right));
+  --padT:clamp(20px,calc(var(--hero-h) * .036),44px);
+  --padB:clamp(18px,calc(var(--hero-h) * .045),52px);
+
+  /* Display size is fitted to the HEIGHT of a resting door (half the hero):
+     two wordmark lines + eyebrow above, four description lines below, with air
+     between. On a landscape screen the height is what runs out first. */
+  --F:clamp(44px,min(10vw,calc(var(--hero-h) * .19 - 78px)),146px);
+  --f:clamp(15px,calc(var(--F) * .245),30px);
+  --m:clamp(11px,calc(var(--F) * .13),14px);
+
+  --gut:clamp(16px,4vw,64px);
+}
+@media (max-width:719px){
+  :root{
+    --padL:max(16px,env(safe-area-inset-left));--padR:max(16px,env(safe-area-inset-right));
+    --padT:64px;            /* clears the bar row */
+    --padB:18px;
+    /* Fitted to the widest word, "hatchery" (about 3.6em in Overused Grotesk
+       at -0.04em), so it never breaks inside the 50% column. */
+    --F:clamp(34px,min(calc((50vw - 16px) / 3.65),calc(var(--hero-h) * .085)),72px);
+    --f:15px;
+    --m:10.5px;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ink);color-scheme:dark;scroll-behavior:smooth;
+  -webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--ink);color:var(--salt);overflow-x:clip;
+  font-family:'Overused Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-size:17px;line-height:1.5;font-kerning:normal;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+p,h1,h2,h3,dl,dd,figure,ul{margin:0}
+a{color:inherit}
+a,button,input,select{touch-action:manipulation}
+img{display:block;max-width:100%;height:auto}
+:focus-visible{outline:2px solid var(--salt);outline-offset:3px}
+.nw{white-space:nowrap}
+/* Units keep their case inside uppercase mono labels (m², never M²). */
+.unit{text-transform:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+.meta{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:400;
+  font-size:var(--m);line-height:1.5;letter-spacing:.02em;text-transform:uppercase}
+
+/* ---------- BAR ---------- */
+.bar{position:absolute;z-index:5;top:var(--padT);right:var(--padR);
+  display:flex;align-items:baseline;gap:clamp(20px,2.4vw,40px);
+  pointer-events:none}     /* empty bar space must not steal a door's hover */
+.bar a{pointer-events:auto;text-decoration:none;position:relative}
+/* The bar's type is 15-19px tall; an invisible pad gives each link a 44px hit
+   area without moving anything. */
+.bar a::before{content:'';position:absolute;left:-10px;right:-10px;top:50%;height:max(100%,44px);transform:translateY(-50%)}
+.bar-brand{font-family:'Overused Grotesk',sans-serif;font-weight:400;
+  font-size:calc(var(--m) * 1.55);letter-spacing:-.02em;line-height:1}
+.bar-cta{position:relative}
+.bar a.bar-cta::after{content:'';position:absolute;left:0;right:0;bottom:-3px;height:1px;
+  background:currentColor;transform:scaleX(0);transform-origin:right;
+  transition:transform .3s var(--e-out)}
+@media (hover:hover) and (pointer:fine){
+  .bar a.bar-cta:hover::after{transform:scaleX(1);transform-origin:left}
+  .bar a.bar-brand{transition:opacity .2s ease}
+  .bar a.bar-brand:hover{opacity:.72}
+}
+@media (max-width:719px){
+  .bar{top:0;left:var(--padL);right:var(--padR);height:56px;
+    justify-content:space-between;align-items:center}
+  .bar-brand{font-size:18px}
+  .bar-cta{font-size:12px}
+  /* Spans too: the chapter's echo bar must sit exactly where the live one does. */
+  .bar > *{min-height:44px;display:inline-flex;align-items:center}
+}
+
+/* ---------- THE DOORS ---------- */
+.hero{position:relative;height:var(--hero-h);overflow:hidden}
+.doors{display:flex;flex-direction:column;height:100%}
+
+.door{
+  position:relative;display:block;flex:1 1 0;min-height:0;
+  overflow:hidden;isolation:isolate;container-type:inline-size;
+  color:var(--salt);text-decoration:none;-webkit-tap-highlight-color:transparent;
+  transition:flex-grow .5s var(--e-hover);
+}
+/* flex-grow is a layout property, kept on purpose: two boxes whose children are
+   all absolutely positioned, so each frame lays out almost nothing. Measured
+   2026-10-10 at 1440x900 DPR2: 16.7ms average frames at 1x and 4x CPU throttle. */
+.door--opener{height:var(--hero-h)}
+
+/* The photograph is ALWAYS one hero tall, centred on the door. A door that grows
+   reveals more of the same picture instead of re-cropping it, so nothing zooms
+   while it resizes, and a fully opened door is pixel-identical to its chapter. */
+.door-media{position:absolute;z-index:-2;left:0;right:0;top:50%;
+  height:var(--hero-h);margin-top:calc(var(--hero-h) / -2)}
+.door-media img{width:100%;height:100%;object-fit:cover;object-position:var(--focal,50% 50%);
+  transform:scale(1.06);transition:transform .8s var(--e-hover)}
+.door--opener .door-media img{transform:none}
+
+/* Dim layer (collapsed door) under the type scrim. */
+.door::before,.door::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none}
+.door::before{background:var(--ink);opacity:0;transition:opacity .4s ease}
+/* Scrim: smooth edge gradients only, like the reference pin: no shade blobs
+   or glow behind the type (Sindri 2026-10-10: "the dark shadows under text
+   makes it weird"). Contrast comes from the photographs themselves (grade v2
+   darkens each door's sky above the horizon, like a graduated filter) and
+   these two gradients. The 1px shadow only crisps letter edges. */
+.door::after{background:
+  linear-gradient(180deg,rgba(12,12,11,var(--edge-top,.36)) 0%,rgba(12,12,11,var(--edge-mid,.12)) 34%,rgba(12,12,11,0) 54%),
+  linear-gradient(0deg,rgba(12,12,11,.56) 0%,rgba(12,12,11,var(--edge-bottom-mid,.22)) 32%,rgba(12,12,11,0) 54%)}
+@media (min-width:1600px){
+  /* The larger wordmark crosses the bright cloud bank. Keep the same smooth
+     edge gradient, with enough density for the large lettering to read. */
+  .door{--edge-top:.40;--edge-mid:.24;--edge-bottom-mid:.34}
+}
+.door-top,.door-foot{text-shadow:0 1px 1px rgba(12,12,11,.18)}
+
+/* Top band: coordinates on the left inset, eyebrow + wordmark hung from 50%. */
+.door-top{position:absolute;top:var(--padT);left:var(--padL);right:var(--padR);
+  display:grid;grid-template-columns:calc(50cqw - var(--padL)) minmax(0,1fr);align-items:start}
+.door-title{grid-column:2}
+
+.wordmark{font-family:'Overused Grotesk',sans-serif;font-weight:400;font-size:var(--F);
+  line-height:.98;letter-spacing:-.04em;margin-top:calc(var(--F) * .28);overflow-wrap:break-word}
+/* Masked lines for the intro rise. The padding/negative-margin pair gives
+   Icelandic accents (ó, í, á) .24em of headroom so the mask never shaves them. */
+.wl{display:block;overflow:hidden;padding:.24em .08em .12em 0;margin:-.24em -.08em -.12em 0}
+.wl > span{display:block}
+
+/* Bottom band: credit on the left inset, description from the 66% line, both
+   sitting on the same last baseline. */
+.door-foot{position:absolute;bottom:var(--padB);left:var(--padL);right:var(--padR);
+  display:grid;grid-template-columns:calc(66cqw - var(--padL)) minmax(0,1fr);
+  align-items:end;align-items:last baseline;
+  transition:opacity .45s ease .12s,transform .7s var(--e-out) .12s}
+.credit{position:relative;align-self:last baseline;padding-right:10px}
+.desc{font-size:var(--f);line-height:1.12;letter-spacing:-.018em;max-width:20em;text-wrap:pretty}
+
+@media (max-width:719px){
+  /* A phone shows a narrow slice of a hero-tall photo, so each door can set its
+     own mobile focal point (the tower slides left, clear of the wordmark). */
+  .door-media img{object-position:var(--focal-m,var(--focal,50% 50%))}
+  .door-foot{grid-template-columns:calc(50cqw - var(--padL)) minmax(0,1fr)}
+}
+
+/* ---------- HOVER: the door you point at opens wider ---------- */
+@media (hover:hover) and (pointer:fine){
+  /* Pre-promoted so the first hover does not pay a one-time raster (166ms
+     spike measured without this). Fine pointers only: phones never hover. */
+  .door-media img{will-change:transform}
+  .doors:hover .door{flex-grow:1}
+  .doors .door:hover{flex-grow:1.7}
+  .door:hover .door-media img{transform:scale(1)}
+  /* The other door keeps its name and drops its description, which no longer
+     fits once it is the short one. Out faster than in. */
+  .doors:hover .door:not(:hover) .door-foot{opacity:0;transform:translateY(12px);
+    transition:opacity .22s ease,transform .3s ease}
+  .doors:hover .door:not(:hover)::before{opacity:.28}
+}
+/* The bar sits over the top door, so pointing at its links keeps the top door
+   open instead of snapping both back to equal. */
+@media (hover:hover) and (pointer:fine){
+  .hero:has(.bar a:hover) .door{flex-grow:1}
+  .hero:has(.bar a:hover) .door:first-child{flex-grow:1.7}
+  .hero:has(.bar a:hover) .door:first-child .door-media img{transform:scale(1)}
+  .hero:has(.bar a:hover) .door:nth-child(2) .door-foot{opacity:0;transform:translateY(12px)}
+  .hero:has(.bar a:hover) .door:nth-child(2)::before{opacity:.28}
+}
+/* Keyboard parity: a focused door behaves like a hovered one. */
+.doors:has(.door:focus-visible) .door{flex-grow:1}
+.doors .door:focus-visible{outline:2px solid var(--salt);outline-offset:-8px}
+/* Same specificity family as the :has() rule above, so the focused door wins. */
+.doors:has(.door:focus-visible) .door:focus-visible{flex-grow:1.7}
+/* Keyboard actions do not animate: the expand lands at once on Tab. */
+.doors:has(.door:focus-visible) .door,.doors:has(.door:focus-visible) .door-foot{transition-duration:0s}
+.doors .door:focus-visible .door-media img{transform:scale(1)}
+.doors:has(.door:focus-visible) .door:not(:focus-visible) .door-foot{opacity:0;transform:translateY(12px)}
+
+/* ---------- OPEN: the chosen door takes the whole hero ---------- */
+.doors.is-opening .door{transition:flex-grow .8s var(--e-open)}
+.doors.is-opening .door.is-opened{flex-grow:1}
+.doors.is-opening .door:not(.is-opened){flex-grow:0}
+.doors.is-opening .door:not(.is-opened) > :not(.door-media){opacity:0;transition:opacity .2s ease}
+.doors.is-opening .door.is-opened .door-media img{transform:scale(1);transition:transform .8s var(--e-open)}
+.doors.is-opening .door.is-opened .door-foot{opacity:1;transform:none}
+.doors.is-opening .door.is-opened::before{opacity:0}
+.doors.is-opening{pointer-events:none}
+/* Snapping back offscreen after the jump: no transition, so Back never shows it. */
+.doors.is-resetting .door,.doors.is-resetting .door *,.doors.is-resetting .door::before{transition:none !important}
+
+/* ---------- INTRO ---------- */
+.curtain{display:none}
+html.js .curtain{display:block;position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.curtain i{position:absolute;left:0;right:0;height:50.5%;background:var(--ink);
+  will-change:transform;transition:transform 1.15s var(--e-open)}
+.curtain i:first-child{top:0;transform-origin:50% 0}
+.curtain i:nth-child(2){bottom:0;transform-origin:50% 100%}
+/* The seam draws from the centre while the pictures decode. Animation, not a
+   transition, so it starts at first paint without waiting for app.js. */
+.curtain b{position:absolute;left:0;right:0;top:50%;height:1px;margin-top:-.5px;
+  background:var(--salt);opacity:.55;transform:scaleX(0);
+  animation:seam 1.1s var(--e-out) .1s forwards;transition:opacity .3s linear}
+@keyframes seam{to{transform:scaleX(1)}}
+.hero.is-ready .curtain i{transform:scaleY(0)}
+.hero.is-ready .curtain b{opacity:0}
+
+html.js .hero:not(.is-ready) .door-media{transform:scale(1.1)}
+.hero.is-ready .door-media{transition:transform 2.6s cubic-bezier(.22,.61,.36,1)}
+
+html.js .hero:not(.is-ready) .door .wl > span{transform:translateY(112%)}
+.hero.is-ready .door .wl > span{transition:transform 1.15s var(--e-out) var(--d,.5s)}
+.hero .door .wl:nth-child(2) > span{--d:.58s}
+.hero .door + .door .wl:first-child > span{--d:.6s}
+.hero .door + .door .wl:nth-child(2) > span{--d:.68s}
+
+html.js .hero:not(.is-ready) :is(.door-coords,.door-place,.credit,.desc,.bar){opacity:0}
+html.js .hero:not(.is-ready) :is(.credit,.desc){transform:translateY(14px)}
+.hero.is-ready :is(.door-coords,.door-place){transition:opacity .8s ease .7s}
+.hero.is-ready :is(.credit,.desc){transition:opacity .8s ease .85s,transform 1s var(--e-out) .85s}
+.hero.is-ready .bar{transition:opacity .8s ease 1s}
+
+/* ---------- INNER PAGES ----------
+   Every section after the doors hangs from the hero's own verticals: the
+   left inset, the 50% line and the 66% line. main is the query container, so
+   the lines land exactly where they sit in the doors (no scrollbar drift).   */
+main{container-type:inline-size}
+.ch{display:grid;
+  grid-template-columns:[a] calc(50cqw - var(--padL)) [b] 16cqw [c] minmax(0,1fr) [d];
+  padding:clamp(104px,12vw,200px) var(--padR) 0 var(--padL);
+  column-gap:0;row-gap:clamp(28px,3.2vw,52px);align-items:start}
+.ch > *{min-width:0}
+.ch-title{grid-column:b / d;font-weight:400;font-size:clamp(40px,5.2vw,88px);line-height:1;
+  letter-spacing:-.035em;text-wrap:balance;max-width:11em}
+.ch-sub{font-weight:400;font-size:clamp(28px,2.6vw,42px);line-height:1.05;letter-spacing:-.03em}
+.ch-lede{grid-column:b / d;font-size:clamp(22px,2.2vw,34px);line-height:1.2;letter-spacing:-.022em;
+  max-width:24em;text-wrap:pretty}
+.ch-text{grid-column:c / d;display:grid;gap:1.1em;max-width:34em}
+.ch-text p:not(.meta){font-size:17px;line-height:1.6;text-wrap:pretty}
+.ch-label{color:var(--salt-72);margin-bottom:-.6em}
+.ch-links{display:flex;flex-wrap:wrap;gap:4px 32px}
+
+/* The spec rail: on the left inset, level with the title, like the door's
+   coordinates. Labels mono, values sans. */
+.spec{grid-column:a / b;grid-row:1 / span 3;padding-right:clamp(24px,6cqw,120px);
+  display:grid;grid-template-columns:1fr 1fr;gap:26px 24px;align-self:start;max-width:30em}
+.spec dt{color:var(--salt-72)}
+.spec dd{margin-top:6px;font-size:16px;line-height:1.35}
+.intro .ch-title{grid-row:1}
+.intro .ch-lede{grid-row:2}
+.intro .ch-text{grid-row:3}
+
+/* Full-bleed photograph: edge to edge, the place at full size. */
+.bleed{margin:clamp(104px,12vw,200px) 0 0}
+.bleed-frame{position:relative;overflow:hidden;background:#1b1a19}
+.bleed-frame img{width:100%;height:auto}
+.cap{margin-top:14px;font-size:14px;line-height:1.45;color:var(--salt-72)}
+.bleed .cap{padding-left:calc(66cqw);padding-right:var(--padR)}
+
+/* Their four promises, 2 x 2 from the 50% line, hairline over each. */
+.feats .ch-title{grid-column:a / b;padding-right:5cqw;font-size:clamp(36px,4.2vw,72px)}
+.feat-list{grid-column:b / d;list-style:none;margin:0;padding:0;
+  display:grid;grid-template-columns:1fr 1fr;gap:clamp(36px,4vw,64px) clamp(24px,3vw,56px)}
+.feat-list li{border-top:1px solid var(--hair);padding-top:18px}
+.feat-list h3{font-weight:400;font-size:clamp(20px,1.6vw,26px);line-height:1.15;letter-spacing:-.02em}
+.feat-list p{margin-top:10px;font-size:16px;line-height:1.55;color:var(--salt-72);max-width:26em}
+
+/* Two photographs off the grid: a large one from the left inset, a tall one
+   on the 66% line set lower, the text under it. */
+.pair{row-gap:clamp(32px,3vw,48px)}
+.pair figure{overflow:hidden}
+.pair img{width:100%;height:auto}
+.pair-a{grid-column:a / c;grid-row:1;padding-right:6cqw;background:none}
+.pair-b{grid-column:c / d;grid-row:1;margin-top:clamp(56px,8cqw,140px)}
+.pair-text{grid-column:a / c;grid-row:2;display:grid;gap:18px;max-width:38em;padding-right:6cqw}
+.pair-text p{font-size:17px;line-height:1.6;text-wrap:pretty}
+.room-feats{grid-column:c / d;grid-row:2;display:grid;gap:18px}
+.room-feats div{border-top:1px solid var(--hair);padding-top:12px}
+.room-feats dt{font-size:17px;line-height:1.3}
+.room-feats dd{margin-top:4px;font-size:15px;line-height:1.5;color:var(--salt-72)}
+
+/* Two more, side by side on the hero's lines. */
+.duo figure{margin:0}
+.duo img{width:100%;height:auto;background:#1b1a19}
+.duo-a{grid-column:a / b;padding-right:clamp(24px,5cqw,96px)}
+.duo-b{grid-column:b / d;align-self:end}
+.duo--hatchery .duo-a{width:70%;justify-self:end}
+
+/* The other building, as one more door. */
+.door--next{height:min(78svh,720px);min-height:480px;margin-top:clamp(104px,12vw,200px)}
+.door--next .door-media img{transform:scale(1.04)}
+@media (hover:hover) and (pointer:fine){ .door--next:hover .door-media img{transform:scale(1)} }
+.door--next:focus-visible{outline:2px solid var(--salt);outline-offset:-8px}
+
+/* ---------- HOME: around (map) and guests ---------- */
+.around .ch-title{grid-row:1}
+.around .ch-lede{grid-row:2;grid-column:b / d}
+.around-maps{grid-column:a / d;grid-row:3;display:grid;grid-template-columns:minmax(0,66fr) minmax(0,30fr);
+  gap:clamp(20px,2.4vw,40px);align-items:start;margin-top:clamp(8px,2vw,32px)}
+.places{grid-column:a / d;grid-row:4;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:28px clamp(20px,2.4vw,40px);margin-top:clamp(16px,2vw,32px)}
+.places-note{grid-column:a / d;grid-row:5;font-size:14px;line-height:1.45;color:var(--salt-72)}
+.said .ch-title{grid-column:a / b;grid-row:1;padding-right:5cqw;font-size:clamp(36px,4.2vw,72px)}
+.scores{grid-column:a / b;grid-row:2;font-size:16px;line-height:1.6;color:var(--salt-72)}
+.scores strong{font-weight:400;color:var(--salt)}
+.quote{margin:0}
+.quote blockquote{margin:0}
+.quote p{font-size:clamp(19px,1.6vw,24px);line-height:1.3;letter-spacing:-.015em;text-wrap:pretty;max-width:22em}
+.quote figcaption{margin-top:14px;color:var(--salt-72)}
+.quote--lead{grid-column:b / d;grid-row:1 / span 2}
+.quote--lead p{font-size:clamp(28px,3.4vw,54px);line-height:1.1;letter-spacing:-.028em;max-width:16em}
+.quote--a{grid-column:a / b;grid-row:3;padding-right:5cqw;margin-top:32px;justify-self:end;max-width:30em}
+.quote--b{grid-column:b / d;grid-row:3;margin-top:96px;max-width:30em}
+.said-note{grid-column:b / d;grid-row:4;font-size:14px;color:var(--salt-72)}
+
+.map{margin:0}
+.map-canvas{position:relative;width:100%;background:#22211e;overflow:hidden}
+.map-canvas svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.m-land{fill:#22211e}
+.m-water{fill:#141719}
+.m-river{fill:none;stroke:rgba(243,241,236,.2);stroke-width:1.1;vector-effect:non-scaling-stroke}
+.m-road{fill:none;stroke:rgba(243,241,236,.11);stroke-width:.8;vector-effect:non-scaling-stroke}
+.m-road--major{stroke:rgba(243,241,236,.36);stroke-width:1.3}
+.m-track{fill:none;stroke:rgba(243,241,236,.3);stroke-width:1.6;vector-effect:non-scaling-stroke}
+.m-bld{fill:rgba(243,241,236,.14)}
+.m-bld--ours{fill:rgba(243,241,236,.5)}
+/* Dots and labels are HTML so they keep their size at any width. */
+.map-pt{position:absolute;width:0;height:0}
+.map-pt i{position:absolute;left:-3px;top:-3px;width:6px;height:6px;border-radius:50%;background:var(--salt-72)}
+.map-pt b{position:absolute;top:-.75em;font-weight:400;white-space:nowrap;
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;line-height:1.5;
+  letter-spacing:.02em;text-transform:uppercase;color:var(--salt-72)}
+/* Cartographic knockouts keep labels readable across bright road/building strokes. */
+.map-pt b,.map-edge{background:#22211e}
+.map-pt[data-side="r"] b{left:9px}
+.map-pt[data-side="l"] b{right:9px}
+.map-pt[data-side="tr"] b{left:7px;top:-1.9em}
+.map-pt[data-side="bl"] b{right:7px;top:.4em}
+.map-pt[data-side="b"] b{left:0;top:18px;transform:translateX(-50%)}
+.map-pt--home i{left:-6px;top:-6px;width:12px;height:12px;background:var(--salt);
+  box-shadow:0 0 0 4px rgba(243,241,236,.18)}
+.map-pt--home b{font-family:'Overused Grotesk',sans-serif;font-size:19px;letter-spacing:-.02em;
+  text-transform:none;color:var(--salt);top:-.68em}
+.map-pt--home[data-side="r"] b{left:16px}
+.map-pt--home[data-side="l"] b{right:16px}
+.map-pt--plain b{font-family:'Overused Grotesk',sans-serif;font-size:17px;letter-spacing:-.02em;
+  text-transform:none;color:var(--salt)}
+.map-edge{position:absolute;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;
+  line-height:1.5;letter-spacing:.02em;text-transform:uppercase;color:var(--salt-72)}
+.map-edge--w{left:10px;transform:translateY(-50%)}
+.map-edge--s{bottom:10px;transform:translateX(-50%)}
+.map-scale{position:absolute;right:12px;bottom:12px;height:6px;border:1px solid var(--salt-72);border-top:0}
+.map-scale em{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);font-style:normal;white-space:nowrap;
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;line-height:1;letter-spacing:.02em;color:var(--salt-72)}
+.map-cap{margin-top:12px;font-size:14px;line-height:1.45;color:var(--salt-72);max-width:46em}
+.places-group{border-top:1px solid var(--hair);padding-top:14px}
+.places-group h3{color:var(--salt-72);margin-bottom:6px}
+.places ul{list-style:none;margin:0;padding:0}
+.places li{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:5px 0;font-size:17px;line-height:1.3}
+.places li span:last-child{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;
+  font-variant-numeric:tabular-nums;color:var(--salt-72);white-space:nowrap}
+.places li span:last-child:not(:empty)::after{content:'\00a0km'}
+
+/* ---------- STAY: the SNDR stay picker ---------- */
+.stay{padding-bottom:clamp(96px,10vw,160px);row-gap:22px}
+.stay > :not(.stay-cal){grid-column:a / b;margin-right:clamp(24px,5cqw,96px)}
+.stay-title{max-width:none;font-size:clamp(48px,6.4vw,112px)}
+.stay-cal{grid-column:b / d;grid-row:1 / span 5;container-type:inline-size}
+.stay-which{display:grid;gap:10px}
+.stay-opt{display:flex;justify-content:space-between;align-items:center;gap:16px;width:100%;
+  min-height:76px;padding:14px 18px;text-align:left;cursor:pointer;color:var(--salt);
+  background:transparent;border:1px solid var(--hair);border-radius:0;font:inherit;
+  transition:border-color .25s ease,background-color .25s ease}
+.stay-opt-name{font-size:clamp(22px,1.9vw,30px);line-height:1.05;letter-spacing:-.025em}
+.stay-opt .meta{color:var(--salt-72);text-align:right}
+.stay-opt.is-on{border-color:var(--salt);background:rgba(243,241,236,.06)}
+.stay-opt:focus-visible{outline:2px solid var(--salt);outline-offset:3px}
+@media (hover:hover) and (pointer:fine){ .stay-opt:not(.is-on):hover{border-color:var(--salt-72)} }
+.stay-sum{font-size:17px;line-height:1.5;min-height:3em;text-wrap:pretty}
+.stay-go{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:60px;padding:0 22px;
+  background:var(--salt);color:var(--ink);text-decoration:none;font-size:17px;letter-spacing:-.01em;
+  transition:opacity .2s ease}
+.stay-go .ar{font-size:22px;transition:transform .25s var(--e-out)}
+@media (hover:hover) and (pointer:fine){ .stay-go:hover .ar{transform:translateX(4px)} }
+.stay-go:active{opacity:.8}
+.stay-go:focus-visible{outline:2px solid var(--salt);outline-offset:3px}
+.stay-note{font-size:14px;line-height:1.5;color:var(--salt-72)}
+
+/* The picker itself (assets/vendor/staypicker.js builds kl-stay-* markup). */
+.kl-stay{border:1px solid var(--hair)}
+.kl-stay-head{display:flex;align-items:center;gap:12px;padding:16px 16px 0}
+.kl-stay-months{flex:1;min-width:0;margin:0;white-space:nowrap;display:grid;grid-template-columns:1fr 1fr;
+  font-size:19px;letter-spacing:-.02em;text-align:center}
+.kl-stay-month2{color:var(--salt)}
+.kl-stay-sep{display:none}   /* the two month names sit over their own grids */
+.kl-stay-arrow{width:44px;height:44px;flex:none;display:grid;place-items:center;cursor:pointer;color:var(--salt);
+  background:none;border:1px solid var(--hair);border-radius:0;transition:border-color .2s ease}
+.kl-stay-arrow:disabled{opacity:.25;cursor:default}
+.kl-stay-chev{width:8px;height:8px;border-top:1px solid currentColor;border-right:1px solid currentColor}
+.kl-stay-chev--r{transform:translateX(-2px) rotate(45deg)}
+.kl-stay-chev--l{transform:translateX(2px) rotate(-135deg)}
+.kl-stay-grids{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:14px 8px 18px}
+.kl-stay-dows{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;padding-bottom:10px;margin-bottom:6px;
+  border-bottom:1px solid var(--hair);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;
+  letter-spacing:.04em;color:var(--salt-72)}
+.kl-stay-days{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+.kl-stay-day{position:relative;border:0;background:none;padding:0;cursor:pointer;color:var(--salt);
+  min-height:44px;display:grid;place-items:center;
+  font-family:'Overused Grotesk',system-ui,sans-serif;font-size:16px;font-variant-numeric:tabular-nums}
+.kl-stay-day::before{content:'';position:absolute;inset:3px 0;z-index:0;transition:background-color .15s ease}
+.kl-stay-n{position:relative;z-index:1}
+.kl-stay-day.is-out{visibility:hidden}
+.kl-stay-day.is-past{opacity:.24;cursor:default}
+.kl-stay-day.is-today .kl-stay-n{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px}
+.kl-stay-day.is-mid::before{background:rgba(243,241,236,.13)}
+.kl-stay-day.is-start::before,.kl-stay-day.is-end::before{background:var(--salt)}
+.kl-stay-day.is-start,.kl-stay-day.is-end{color:var(--ink)}
+.kl-stay-day:focus-visible{outline:2px solid var(--salt);outline-offset:-2px}
+.kl-stay-read{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch;padding:16px;border-top:1px solid var(--hair)}
+.kl-stay-cell{border:1px solid var(--hair);padding:10px 12px;display:grid;gap:6px;min-width:0;transition:border-color .25s ease}
+.kl-stay-cell[data-filled]{border-color:var(--salt-72)}
+.kl-stay-cell-l{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--salt-72)}
+.kl-stay-cell-v{font-size:17px;line-height:1.3}
+.kl-stay-nights{align-self:center;min-width:7ch;text-align:center;font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--salt-72)}
+/* The summary beside the calendar says it in a sentence; the picker's own
+   note line would repeat it to a screen reader. */
+.kl-stay-note{display:none}
+@media (hover:hover) and (pointer:fine){
+  .kl-stay-arrow:not(:disabled):hover{border-color:var(--salt-72)}
+  .kl-stay-day:not(:disabled):not(.is-start):not(.is-end):hover::before{background:rgba(243,241,236,.09)}
+}
+
+.cta{position:relative;display:inline-flex;align-items:center;gap:.9em;min-height:44px;
+  color:var(--salt);text-decoration:none}
+.cta::after{content:'';position:absolute;left:0;right:0;bottom:8px;height:1px;
+  background:var(--hair);transition:background-color .3s ease}
+.cta .ar{display:inline-block;transition:transform .25s var(--e-out)}
+@media (hover:hover) and (pointer:fine){
+  .cta:hover::after{background:var(--salt)}
+  .cta:hover .ar{transform:translateX(4px)}
+}
+
+/* JetBrains Mono has no arrows; Overused Grotesk carries U+2190-2199, so every
+   arrow comes from it, even inside mono labels. */
+.ar{font-family:'Overused Grotesk',system-ui,sans-serif;text-transform:none}
+
+/* ---------- FOOTER ---------- */
+.foot{padding:clamp(72px,8vw,128px) var(--padR) calc(24px + env(safe-area-inset-bottom)) var(--padL);
+  border-top:1px solid var(--hair);display:grid;
+  grid-template-columns:calc(50vw - var(--padL)) minmax(0,1fr);row-gap:clamp(40px,5vw,72px)}
+.foot-mark{font-size:clamp(64px,10vw,180px);line-height:.9;letter-spacing:-.045em;text-decoration:none;color:var(--salt);
+  align-self:start;width:fit-content}
+.foot-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px 32px;align-self:end;overflow-wrap:anywhere}
+.foot-cols > :first-child{grid-column:1 / -1}
+.foot-cols .meta{color:var(--salt-72);margin-bottom:10px}
+.foot-cols p:not(.meta){font-size:16px;line-height:1.6}
+.foot-cols a{text-decoration:none;color:var(--salt);display:inline-flex;align-items:center;min-height:44px}
+.foot-base{grid-column:1 / -1;display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;
+  border-top:1px solid var(--hair);padding-top:16px}
+.foot-base a{text-decoration:none;color:var(--salt-72);min-height:44px;display:inline-flex;align-items:center;gap:.5em}
+@media (hover:hover) and (pointer:fine){
+  .foot-base a:hover,.foot-cols a:hover{color:var(--salt)}
+  .foot-mark:hover{opacity:.72}
+}
+
+/* ---------- PAGE TO PAGE ----------
+   A door's fully opened state and its building page's opener are the same
+   frame, so the browser's default crossfade between them is invisible. */
+@media (prefers-reduced-motion:no-preference){ @view-transition{navigation:auto} }
+
+/* ---------- INNER PAGES ON SMALLER SCREENS ---------- */
+@media (max-width:1023px){
+  .places{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .around-maps{grid-template-columns:minmax(0,1fr)}
+  .map--farm{max-width:420px}
+}
+/* Two months need 650px: 14 x 44px days, 16px gap and 18px borders/padding.
+   The calendar's own width, not the viewport, decides when they fit. */
+@container (max-width:648px){
+  .kl-stay-months{grid-template-columns:1fr}
+  .kl-stay-month2{display:none}
+  .kl-stay-grids{grid-template-columns:1fr}
+  .kl-stay-grid--2{display:none}
+}
+@media (min-width:900px) and (max-width:1199px){
+  .ch-text{grid-column:b / d;max-width:29em;padding-left:5cqw}
+  .bleed .cap{padding-left:50cqw}
+  .feat-list{grid-template-columns:1fr}
+}
+@media (max-width:899px){
+  .ch{grid-template-columns:[a b c] minmax(0,1fr) [d];padding-top:clamp(80px,18vw,120px)}
+  .ch > *{grid-column:a / d !important;grid-row:auto !important}
+  .ch > :is(.spec,.ch-title,.pair-a,.pair-text,.duo-a,.quote--a){padding-right:0}
+  .spec{max-width:none}
+  .feat-list{grid-template-columns:minmax(0,1fr)}
+  .pair-b{margin-top:0;width:66%;justify-self:end}
+  .duo-a{width:78%}
+  .quote--a,.quote--b{margin-top:0}
+  .bleed{margin-top:clamp(80px,18vw,120px)}
+  .bleed .cap{padding-left:var(--padL)}
+  .foot{grid-template-columns:minmax(0,1fr)}
+  .foot-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .stay > :not(.stay-cal){margin-right:0}
+  .stay-cal{grid-row:auto}
+  .stay-sum{min-height:0}
+  .intro .spec{order:3}
+  .quote--a{justify-self:start}
+}
+@media (max-width:599px){
+  /* Secondary places remain in the adjacent list; their dots keep the map
+     geography without colliding labels at phone sizes. */
+  .map--region .map-pt--minor b{display:none}
+  .places{grid-template-columns:minmax(0,1fr)}
+  .foot-cols{grid-template-columns:minmax(0,1fr)}
+  .stay-cal{border-inline:0;margin-inline:calc(-1 * var(--padL)) calc(-1 * var(--padR));width:calc(100% + var(--padL) + var(--padR))}
+  .kl-stay-grids{padding-inline:0}
+  .kl-stay-read{padding-inline:var(--padL)}
+  .kl-stay-cell{padding:10px 8px}
+  .kl-stay-nights{min-width:0}
+  .kl-stay-head{padding-inline:var(--padL)}
+}
+
+/* A reserved desktop scrollbar must still leave room for seven 44px dates
+   at a 320px window; overlay-scrollbar phones are unaffected. */
+@media (max-width:359px){ html{scrollbar-width:thin} }
+
+/* ---------- SKIP LINK ---------- */
+.skip{position:absolute;z-index:20;left:var(--padL);top:-100px;padding:12px 16px;min-height:44px;
+  display:inline-flex;align-items:center;background:var(--ink);color:var(--salt);text-decoration:none}
+.skip:focus-visible{top:12px}
+
+
+/* Press feedback: text links dim on press, they do not scale. */
+:is(.cta,.bar a,.foot-base a,.foot-cols a):active{opacity:.6;transition:opacity 0s}
+
+/* ---------- FLOW: Lenis + scroll-linked motion (app.js, MOTION) ----------
+   Lenis smooths the wheel on desktop only; phones keep native scrolling.
+   The browser's own smooth anchor scroll must not fight it. */
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto !important}
+.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
+.lenis.lenis-stopped{overflow:hidden}
+
+/* Section titles rise word by word through a mask, like the hero wordmark.
+   .24em headroom so Icelandic accents are never shaved by the mask. */
+.tw{display:inline-block;overflow:hidden;vertical-align:top;
+  padding:.24em .06em .14em 0;margin:-.24em -.06em -.14em 0}
+.tw > span{display:inline-block}
+html.js .rv .tw > span{transform:translateY(108%);
+  transition:transform 1.05s var(--e-out) calc(var(--i,0) * 70ms + 60ms)}
+html.js .rv.is-in .tw > span{transform:none}
+/* The title itself does not slide as a block; its words do. */
+html.js .ch-title.rv{transform:none;opacity:1;transition:none}
+
+/* Lists arrive item by item, a beat apart. */
+html.js .rv :is(.feat-list > li,.places-group,.room-feats > div),
+html.js :is(.feat-list,.places,.room-feats).rv > *{opacity:0;transform:translateY(18px);
+  transition:opacity .6s ease,transform .8s var(--e-out)}
+html.js :is(.feat-list,.places,.room-feats).rv.is-in > *{opacity:1;transform:none}
+:is(.feat-list,.places,.room-feats) > :nth-child(2){transition-delay:.08s}
+:is(.feat-list,.places,.room-feats) > :nth-child(3){transition-delay:.16s}
+:is(.feat-list,.places,.room-feats) > :nth-child(4){transition-delay:.24s}
+
+/* Elements GSAP scrubs: promoted while they move, nothing transitions them. */
+.px-drift,.bleed-frame img,.door--next .door-media,.door--opener .door-media{will-change:transform}
+
+/* ---------- REVEALS ---------- */
+/* Short on purpose: a fixed-duration reveal can be outrun by a fast scroll,
+   so it finishes inside about two thirds of a second. */
+html.js .rv{opacity:0;transform:translateY(14px);
+  transition:opacity .6s ease,transform .75s var(--e-out)}
+html.js .rv.is-in{opacity:1;transform:none}
+@media print{html.js .rv{opacity:1;transform:none}}
+
+/* ---------- REDUCED MOTION ---------- */
+@media (prefers-reduced-motion:reduce){
+  html.js .rv .tw > span,html.js :is(.feat-list,.places,.room-feats).rv > *{transform:none !important;opacity:1 !important;transition:none !important}
+  .px-drift,.bleed-frame img,.door--next .door-media,.door--opener .door-media{will-change:auto}
+  html{scroll-behavior:auto}
+  html.js .curtain{display:none}
+  .door,.door-media,.door-media img,.door-foot,.door::before,
+  .hero .door .wl > span,.hero :is(.door-coords,.door-place,.credit,.desc,.bar){transition:none !important;animation:none !important}
+  html.js .hero:not(.is-ready) :is(.door-media,.wl > span,.credit,.desc){transform:none}
+  html.js .hero:not(.is-ready) :is(.door-coords,.door-place,.credit,.desc,.bar){opacity:1}
+  html.js .rv{opacity:1;transform:none;transition:none !important}
+}
