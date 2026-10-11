@@ -194,8 +194,10 @@
      picker the other SNDR builds carry). On the homepage the guest also picks
      a building; on a building page it is fixed. The Continue link opens that
      building's room group in the owners' own bookvisit engine with the dates
-     filled in: the engine reads year, month, day and staylength from its URL
-     (checked 2026-10-10). Without dates it opens the same page with none. */
+     filled in: the engine reads roomconfig (a2 = 1 room, 2 adults), year, month,
+     day and staylength from its URL (the URL its own search produces, checked
+     2026-10-10). Without roomconfig it answers "no rooms" for dates it sells.
+     Without dates it opens the same page with none. */
   const ENGINE = 'https://online.bookvisit.com/accommodation/room-group-info'
     + '?channelid=c7e4bfc4-0f25-4e29-9dbd-ae3606b6962a&roomtypegroupid=';
   const GROUP = {
@@ -229,7 +231,7 @@
       let query = '';
       if (r.start && r.end) {
         const s = r.start;
-        query = `&year=${s.getFullYear()}&month=${s.getMonth() + 1}&day=${s.getDate()}&staylength=${r.nights}`;
+        query = `&roomconfig=a2&year=${s.getFullYear()}&month=${s.getMonth() + 1}&day=${s.getDate()}&staylength=${r.nights}`;
         sum.textContent = `${r.nights} ${r.nights === 1 ? 'night' : 'nights'} in ${NAME[which]}, ${short(r.start)} to ${short(r.end)}.`;
         go.querySelector('.stay-go-t').textContent = `Continue with ${r.nights === 1 ? 'this night' : `these ${r.nights} nights`}`;
       } else {
